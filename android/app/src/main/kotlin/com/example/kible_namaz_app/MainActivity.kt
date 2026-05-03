@@ -1,5 +1,6 @@
-package com.example.kible_namaz_app
+package com.cahitacar.kiblenamaz
 
 import io.flutter.embedding.android.FlutterActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterActivity() {
+}

@@ -50,7 +50,9 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 10), () {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -69,23 +71,31 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              "🕌 KIBLE & NAMAZ UYGULAMASI",
-              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+              "KIBLE PUSULASI",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.greenAccent,
+              ),
             ),
-            SizedBox(height: 15),
-
-            Text("Hoşgeldiniz", style: TextStyle(fontSize: 15)),
-            SizedBox(height: 15),
-
-            Text("Developed by Cahit Acar", style: TextStyle(fontSize: 15)),
+            SizedBox(height: 6),
+            Text(
+              "NAMAZ VAKİTLERİ UYGULAMASINA",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.white70),
+            ),
+            SizedBox(height: 20),
+            Text(
+              "Hoş geldiniz",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, color: Colors.white60),
+            ),
             SizedBox(height: 30),
             Text(
-              "UYGULAMA AÇILIYOR...",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.greenAccent,
-                letterSpacing: 1,
-              ),
+              "Developed by Cahit Acar",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, color: Colors.white38),
             ),
           ],
         ),
@@ -109,7 +119,7 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
   double? qiblaDirection;
   String cityName = "";
   bool isCityLoading = true;
-  late BannerAd _bannerAd;
+  BannerAd? _bannerAd;
   Map<String, String> prayerTimes = {};
 
   String _f(DateTime t) =>
@@ -121,7 +131,7 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
 
-    Future.microtask(() => initAll());
+    initAll();
 
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3473720329862425/4134961402',
@@ -134,7 +144,7 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _bannerAd.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -149,7 +159,63 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
 
   Future<void> initAll() async {
     try {
-      await Geolocator.requestPermission();
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Konum İzni"),
+          content: const Text(
+            "Kıble yönü ve namaz saatlerini doğru hesaplamak için konumunuza ihtiyaç duyuyoruz.",
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                "Tamam",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      // 🔥 BURASI ÖNEMLİ SIRA
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Konum izni verilmedi")));
+        return;
+      }
 
       Position pos = await Geolocator.getCurrentPosition();
 
@@ -210,29 +276,55 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(
-          "🕌 KIBLE & NAMAZ UYGULAMASI",
-          style: TextStyle(fontSize: 18),
+        title: Center(
+          child: Text(
+            "🕌 KIBLE VE NAMAZ SAATLERİ UYGULAMASI",
+            style: TextStyle(fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       body: Column(
         children: [
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
 
           Text(
             isCityLoading
-                ? "Konum alınıyor..."
+                ? "Lütfen bekleyin.Konumunuz açık olsun.İnternet bağlantınızı kontrol edin."
                 : cityName.isEmpty
-                ? "Konum bulunamadı"
+                ? "İnternet veya konum hatası. Yenilemeyi deneyin"
                 : cityName,
-            style: TextStyle(
+            textAlign: TextAlign.center, //
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color.fromARGB(243, 59, 222, 4),
             ),
           ),
-
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
+          if (cityName.isEmpty) ...[
+            ElevatedButton.icon(
+              onPressed: initAll,
+              icon: const Icon(Icons.refresh, size: 20),
+              label: const Text(
+                "Yenile",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853), // canlı yeşil
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30), // yuvarlak köşe
+                ),
+                elevation: 6,
+                shadowColor: Colors.greenAccent,
+              ),
+            ),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: prayerTimes.entries.map((e) {
@@ -240,12 +332,12 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
                 children: [
                   Text(
                     e.key,
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
+                    style: const TextStyle(fontSize: 14, color: Colors.white70),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     e.value,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -255,6 +347,7 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
               );
             }).toList(),
           ),
+
           Expanded(
             child: StreamBuilder<CompassEvent>(
               stream: FlutterCompass.events,
@@ -303,17 +396,34 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 40),
                     Text(
                       isQibla ? "✔ KIBLE BULUNDU" : "KIBLE İÇİN TELEFONU ÇEVİR",
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
                         color: isQibla ? Colors.greenAccent : Colors.white70,
+
                         shadows: isQibla
-                            ? [Shadow(color: Colors.greenAccent, blurRadius: 5)]
+                            ? [
+                                const Shadow(
+                                  color: Colors.greenAccent,
+                                  blurRadius: 5,
+                                ),
+                              ]
                             : [],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    const Text(
+                      "Cahit Acar",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color.fromARGB(255, 49, 242, 5),
+                        letterSpacing: 1,
                       ),
                     ),
                   ],
@@ -321,6 +431,9 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
               },
             ),
           ),
+
+          if (_bannerAd != null)
+            SizedBox(height: 50, child: AdWidget(ad: _bannerAd!)),
         ],
       ),
     );
@@ -351,6 +464,7 @@ class CompassPainter extends CustomPainter {
         ..color = Colors.white24
         ..style = PaintingStyle.stroke,
     );
+
     void drawTextDual(String short, String long, Offset pos, Color color) {
       final tp = TextPainter(
         text: TextSpan(
@@ -378,7 +492,7 @@ class CompassPainter extends CustomPainter {
     }
 
     canvas.drawCircle(center, 5, Paint()..color = Colors.white);
-    // 🔥 YÖNLER (DÖNER)
+
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(-heading * pi / 180);
@@ -390,21 +504,18 @@ class CompassPainter extends CustomPainter {
       Offset(center.dx - 10, center.dy - radius + 5),
       Colors.red,
     );
-
     drawTextDual(
       "S",
       "Güney",
       Offset(center.dx - 10, center.dy + radius - 35),
       Colors.blue,
     );
-
     drawTextDual(
       "E",
       "Doğu",
       Offset(center.dx + radius - 25, center.dy - 15),
       Colors.green,
     );
-
     drawTextDual(
       "W",
       "Batı",
@@ -428,7 +539,6 @@ class CompassPainter extends CustomPainter {
     canvas.translate(-center.dx, -center.dy);
 
     canvas.drawPath(path, paint);
-
     canvas.restore();
   }
 
