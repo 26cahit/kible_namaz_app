@@ -1,0 +1,33 @@
+[
+  {
+    "ay": 1,
+    "gun": 1,
+    "baslik": "🎉 Yeni Yıl",
+    "mesaj": "Yeni yılınız kutlu olsun."
+  },
+  {
+    "ay": 4,
+    "gun": 23,
+    "baslik": "🇹🇷 23 Nisan",
+    "mesaj": "Ulusal Egemenlik ve Çocuk Bayramı kutlu olsun."
+  },
+  {
+    "ay": 5,
+    "gun": 19,
+    "baslik": "🇹🇷 19 Mayıs",
+    "mesaj": "Atatürk'ü Anma, Gençlik ve Spor Bayramı kutlu olsun."
+  },
+
+  {
+    "ay": 8,
+    "gun": 30,
+    "baslik": "🇹🇷 30 Ağustos",
+    "mesaj": "Zafer Bayramı kutlu olsun."
+  },
+  {
+    "ay": 10,
+    "gun": 29,
+    "baslik": "🇹🇷 Cumhuriyet Bayramı",
+    "mesaj": "Cumhuriyet Bayramınız kutlu olsun."
+  }
+]
