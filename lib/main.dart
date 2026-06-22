@@ -28,6 +28,26 @@ import 'data/short_quotes.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 String? startupPayload;
+String calculationMethod = "turkey";
+CalculationParameters getCalculationParams() {
+  switch (calculationMethod) {
+    case "turkey":
+      return CalculationMethod.turkey.getParameters();
+
+    case "muslim_world_league":
+      return CalculationMethod.muslim_world_league.getParameters();
+
+    case "umm_al_qura":
+      return CalculationMethod.umm_al_qura.getParameters();
+
+    case "north_america":
+      return CalculationMethod.north_america.getParameters();
+
+    default:
+      return CalculationMethod.turkey.getParameters();
+  }
+}
+
 // RANDOM SÖZ ÇEKEN FONKSİYON - YENİ EKLENDİ
 Future<Map<String, dynamic>> getRandomSoz() async {
   final String response = await rootBundle.loadString('assets/words.json');
@@ -118,7 +138,7 @@ Future<void> updateWidgetAlarm() async {
   final lat = double.parse(savedLat);
   final lng = double.parse(savedLng);
 
-  final params = CalculationMethod.turkey.getParameters();
+  final params = getCalculationParams();
 
   final coordinates = Coordinates(lat, lng);
 
@@ -213,7 +233,7 @@ void callbackDispatcher() {
     double lat = double.parse(savedLat);
     double lng = double.parse(savedLng);
 
-    final params = CalculationMethod.turkey.getParameters();
+    final params = getCalculationParams();
     final coordinates = Coordinates(lat, lng);
     final date = DateComponents.from(DateTime.now());
     final pt = PrayerTimes(coordinates, date, params);
@@ -611,25 +631,6 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
   double smoothedHeading = 0;
   double? qiblaDirection;
   String cityName = "";
-  String calculationMethod = "turkey";
-  CalculationParameters getCalculationParams() {
-    switch (calculationMethod) {
-      case "turkey":
-        return CalculationMethod.turkey.getParameters();
-
-      case "muslim_world_league":
-        return CalculationMethod.muslim_world_league.getParameters();
-
-      case "umm_al_qura":
-        return CalculationMethod.umm_al_qura.getParameters();
-
-      case "north_america":
-        return CalculationMethod.north_america.getParameters();
-
-      default:
-        return CalculationMethod.turkey.getParameters();
-    }
-  }
 
   bool isCityLoading = true;
   BannerAd? _bannerAd;
@@ -1370,13 +1371,26 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
   Future<void> getCityName(Position pos) async {
     try {
       var p = await placemarkFromCoordinates(pos.latitude, pos.longitude);
-      cityName = p.first.administrativeArea ?? "";
+
+      cityName =
+          p.first.administrativeArea ??
+          p.first.locality ??
+          p.first.subAdministrativeArea ??
+          p.first.country ??
+          "Bilinmiyor";
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_city', cityName);
     } catch (e) {
-      cityName = "";
+      final prefs = await SharedPreferences.getInstance();
+      cityName = prefs.getString('last_city') ?? "Bilinmiyor";
     }
+
     isCityLoading = false;
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   double calculateQiblaDirection(double lat, double lng) {
