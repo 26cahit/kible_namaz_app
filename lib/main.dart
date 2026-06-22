@@ -300,7 +300,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AndroidAlarmManager.initialize();
   await AndroidAlarmManager.periodic(
-    const Duration(minutes: 30),
+    const Duration(hours: 1),
     999,
     updateWidgetAlarm,
     wakeup: true,
@@ -509,7 +509,7 @@ void main() async {
     ),
     iosNotificationOptions: const IOSNotificationOptions(),
     foregroundTaskOptions: ForegroundTaskOptions(
-      eventAction: ForegroundTaskEventAction.repeat(1800000),
+      eventAction: ForegroundTaskEventAction.repeat(3600000),
       autoRunOnBoot: true,
       autoRunOnMyPackageReplaced: true,
     ),
@@ -522,10 +522,12 @@ void main() async {
   final vakit = prefs.getString('widget_vakit') ?? 'İmsak';
 
   final saat = prefs.getString('widget_saat') ?? '--:--';
-  await FlutterForegroundTask.startService(
-    notificationTitle: '🕌 Sonraki Vakit: $vakit',
-    notificationText: '$saat • $sehir',
-  );
+  if (!await FlutterForegroundTask.isRunningService) {
+    await FlutterForegroundTask.startService(
+      notificationTitle: '🕌 Sonraki Vakit: $vakit',
+      notificationText: '$saat • $sehir',
+    );
+  }
   runApp(const MyApp());
 }
 
@@ -631,13 +633,14 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
   double smoothedHeading = 0;
   double? qiblaDirection;
   String cityName = "";
-
+  String ilceName = "";
+  String ilName = "";
   bool isCityLoading = true;
   BannerAd? _bannerAd;
   Map<String, String> prayerTimes = {};
   bool vibrationEnabled = true;
 
-  bool batteryButtonHidden = false;
+  bool batteryButtonHidden = true;
   bool batteryPromptShown = false;
   bool locationDialogShown = false;
   bool _notificationScheduling = false;
@@ -1372,13 +1375,14 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
     try {
       var p = await placemarkFromCoordinates(pos.latitude, pos.longitude);
 
-      cityName =
-          p.first.administrativeArea ??
-          p.first.locality ??
-          p.first.subAdministrativeArea ??
-          p.first.country ??
-          "Bilinmiyor";
+      ilceName = p.first.subAdministrativeArea ?? "";
+      ilName = p.first.administrativeArea ?? "";
 
+      if (ilceName.isNotEmpty && ilName.isNotEmpty) {
+        cityName = "$ilceName / $ilName";
+      } else {
+        cityName = ilName.isNotEmpty ? ilName : "Bilinmiyor";
+      }
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_city', cityName);
     } catch (e) {
@@ -1578,19 +1582,60 @@ class _QiblaPageState extends State<QiblaPage> with WidgetsBindingObserver {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              Text(
-                isCityLoading
-                    ? "KONUM BEKLENİYOR\n\nKonumunuzu ve internetinizi kontrol edin."
-                    : cityName.isEmpty
-                    ? "İnternet veya konum hatası. Yenilemeyi deneyin"
-                    : cityName,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: MediaQuery.of(context).size.width * 0.045,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(243, 59, 222, 4),
-                ),
-              ),
+              isCityLoading
+                  ? Text(
+                      "KONUM BEKLENİYOR\n\nKonumunuzu ve internetinizi kontrol edin.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: MediaQuery.of(context).size.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(243, 59, 222, 4),
+                      ),
+                    )
+                  : cityName.isEmpty
+                  ? Text(
+                      "İnternet veya konum hatası. Yenilemeyi deneyin",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: MediaQuery.of(context).size.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(243, 59, 222, 4),
+                      ),
+                    )
+                  : RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: ilceName,
+                            style: TextStyle(
+                              fontSize:
+                                  MediaQuery.of(context).size.width * 0.045,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                          TextSpan(
+                            text: " / ",
+                            style: TextStyle(
+                              fontSize:
+                                  MediaQuery.of(context).size.width * 0.045,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ilName,
+                            style: TextStyle(
+                              fontSize:
+                                  MediaQuery.of(context).size.width * 0.045,
+                              fontWeight: FontWeight.bold,
+                              color: const Color.fromARGB(243, 59, 222, 4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
               const SizedBox(height: 10),
               if (!batteryButtonHidden)
                 Padding(
